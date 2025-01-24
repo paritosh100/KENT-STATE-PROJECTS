@@ -1,0 +1,143 @@
+library(ggplot2)
+library(tidyverse)
+data("diamonds")
+View(diamonds)
+head(diamonds,10)
+str(diamonds)
+colnames(diamonds)
+glimpse(diamonds)
+library(dplyr)
+mutate(diamonds, carat_2 = carat * 100)
+
+
+as_tibble(diamonds)
+
+data("mtcars")
+library(readxl)
+
+install.packages("here")
+library("here")
+
+install.packages("skimr")
+library("skimr")
+
+install.packages("janitor")
+library("janitor")
+
+library(dplyr)
+library(palmerpenguins)
+skim_without_charts(penguins)
+
+
+penguins |> 
+  select(-species)
+
+
+
+penguins |>  
+  rename(island_new = island)
+
+#capitalize column names
+
+rename_with(penguins, toupper)
+
+# char, nums,and underscores in column names
+clean_names(penguins)
+
+
+penguins2 = penguins |> arrange(-bill_length_mm)
+View(penguins2)
+
+
+penguins |> group_by(island) |> drop_na() |>
+  summarize(mean_bill_length = mean(bill_length_mm))
+
+
+penguins |> group_by(island) |> drop_na() |>
+  summarize(max_bill_length = max(bill_length_mm))
+  
+
+#optional
+id <- c(1:10)
+
+
+name <- c("John Mendes", "Rob Stewart", "Rachel Abrahamson", "Christy Hickman", "Johnson Harper", "Candace Miller", "Carlson Landy", "Pansy Jordan", "Darius Berry", "Claudia Garcia")
+
+
+job_title <- c("Professional", "Programmer", "Management", "Clerical", "Developer", "Programmer", "Management", "Clerical", "Developer", "Programmer")
+
+
+employee <- data.frame(id, name, job_title)
+employee
+
+
+employee = separate(employee, name, into= c('firstname','lastname'),sep = ' ')
+
+unite(employee, 'name', firstname, lastname, sep= ' ')
+
+View(penguins)
+penguins |> 
+  mutate(body_mass = body_mass_g/1000, flipper_length = flipper_length_mm/1000)
+
+
+
+install.packages('Tmisc')
+library(Tmisc)
+data("quartet")
+View(quartet)
+
+quartet |> 
+  group_by(set) |> 
+  summarize(mean(x),sd(x),mean(y), sd(y), cor(x,y))
+ 
+
+ggplot(quartet,aes(x,y)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  facet_wrap(~set)
+
+install.packages("datasauRus")
+library(datasauRus)
+
+ggplot(datasaurus_dozen,aes(x=x,y=y,colour=dataset))+geom_point()+theme_void()+theme(legend.position = "none")+facet_wrap(~dataset,ncol=3)
+install.packages("SimDesign")                                                                                                                          
+
+library(SimDesign)
+
+actual_temp = c(68.3, 70 , 72.4, 71, 67, 70)
+predicted_temp = c(67.9,69,71.5,70,67,69)
+bias(actual_temp, predicted_temp)
+
+
+actual_sales = c( 150, 203, 137, 247 , 116, 287) 
+predicted_sales = c(200, 300, 150, 250, 150, 300)
+
+bias(actual_sales, predicted_sales)
+
+
+ggplot(data = penguins) + 
+  geom_jitter(mapping = aes
+             (x = flipper_length_mm, 
+               y = body_mass_g))
+
+
+ggplot(data=diamonds)+
+  geom_bar(aes(color, fill = cut)) +
+  facet_wrap(~cut)
+
+
+
+ p <- ggplot(penguins) +
+   geom_point(aes(flipper_length_mm, body_mass_g, color = species)) +
+   labs(title = "Flip lenght in MM vs Body Mass in G",
+        subtitle = "subtitle", 
+        caption = "Collected from 2007 to 2009 by Dr. Gorman") 
+p + annotate("text", x = 220, y = 3500, 
+           label = " The Gentoos are the largest",
+           color = "purple",
+           fontface = "bold",
+           size = 4.5,
+           angle = 25) 
+
+
+ggsave("Three Penguins Species.png")

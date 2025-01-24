@@ -1,0 +1,2 @@
+"0","user_data  = read.csv(""hotel_bookings.csv"")"
+"0","head(user_data)"

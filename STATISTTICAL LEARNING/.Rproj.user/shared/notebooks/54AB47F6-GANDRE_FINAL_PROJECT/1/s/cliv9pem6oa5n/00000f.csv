@@ -1,0 +1,1 @@
+"0","plot(test_data$selling_price,pred_gbm, main=""Scatterplot"", col = c(""red"",""blue""), xlab = ""Actual Selling Price"", ylab = ""Predicted Selling Price"")"

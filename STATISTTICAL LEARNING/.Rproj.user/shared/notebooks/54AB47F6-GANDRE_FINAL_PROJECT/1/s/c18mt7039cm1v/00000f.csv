@@ -1,0 +1,11 @@
+"0","pred_gbm = predict(gbm_model, test_data)"
+"2","Using 4134 trees...
+
+"
+"0","error_gbm <- test_data$selling_price - pred_gbm"
+"0","RMSE_gbm <- sqrt(mean(error_gbm^2))"
+"0","print(paste(""RMSE for Gradient Boosting Model: "", RMSE_gbm))"
+"1","[1]"
+"1"," ""RMSE for Gradient Boosting Model:  125738.566422292"""
+"1","
+"

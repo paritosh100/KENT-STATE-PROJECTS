@@ -1,0 +1,3 @@
+"0","onlineta_city_hotels_v2 <- hotel_bookings %>%"
+"0","  filter(hotel==""City Hotel"") %>%"
+"0","  filter(market_segment==""Online TA"")"

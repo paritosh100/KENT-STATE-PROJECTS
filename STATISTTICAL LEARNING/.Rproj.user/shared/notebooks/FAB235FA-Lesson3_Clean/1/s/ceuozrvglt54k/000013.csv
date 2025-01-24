@@ -1,0 +1,3 @@
+"0","trimmed_df %>% "
+"0","  select(hotel, is_canceled, lead_time) %>% "
+"0","  rename(hotel_type = hotel)"

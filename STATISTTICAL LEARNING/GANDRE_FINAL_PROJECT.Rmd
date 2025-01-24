@@ -1,0 +1,373 @@
+---
+title: " Final Project: Cars Price Prediction "
+subtitle: "MATH 40028/50028: Statistical Learning"
+author: "Paritosh Gandre"
+output: pdf_document
+
+fontfamily: mathpazo
+fontsize: 11pt
+header-includes:
+   - \linespread{1.05}
+urlcolor: blue
+---
+
+```{r warning=FALSE, include=FALSE}
+library(leaps)
+library(Hmisc)
+library(corrplot)
+library(caret)
+library(tidyverse)
+library(rsample)
+library(dplyr)
+library(randomForest)
+library(gbm)
+```
+
+# INTRODUCTION
+
+The dataset is about Indian Car market with more than 8,000 observations and 13 variables which contain Company name, Year,selling price, kilometers driven, fuel type, seller type, transmission, owner, mileage, engine, maximum power, torque, and number of seats.\
+In this project, our target variable i.e. our response variable will be **"selling_price"** of the vehicle. We will predict selling price of a vehicle based on other variable inputs.\
+We need to clean the dataset as it has null values and change types of few columns and then we can use this dataset.\
+We will first split the dataset into training and testing split. Using these splits we will train a Linear, Random forest and Gradient boosting models and evaluate them based on RMSE. There are few combinations of splitting like 70:30, 75:25, 80:20 splits, but we will use 70:30 split that is 70% of the data will be used as a training set and remaining 30% will be used as a testing set. Once we find a optimal model, we will do our prediction on unseen data and will evaluate that too.
+
+```{r}
+data = read.csv("cars_price.csv")
+dim(data)
+head(data,5)
+sum(is.na(data))
+```
+
+The dataset is about Indian Car market with more than **8,000** observations and **13** variables which contain Company name, Year,selling price, kilometers driven, fuel type, seller type, transmission, owner, mileage, engine, maximum power, torque, and number of seats with **221** null values.\
+In this project, our target variable i.e. our response variable will be selling price of the vehicle. We will predict selling price of a vehicle based on other variable inputs.\
+We need to clean the dataset as it has null values and change types of few columns and then we can use this dataset.\
+We will first split the dataset into training and testing split. Using these splits we will train a few model and evaluate them based on few metrics. There are few combinations of splitting like 70:30, 75:25, 80:20 splits, but we will use 70:30 split that is 70% of the data will be used as a training set and remaining 30% will be used as a testing set. Once we find a optimal model, we will do our prediction on unseen data and will evaluate that too.
+
+# Statistical learning strategies and methods
+
+## Exploratory Data Analysis
+
+### splitting company names and storing first word
+
+```{r}
+data$name = sapply(strsplit(data$name," "),`[`,1)
+data = subset(data, select = -c(12))
+```
+
+### Plotting number of occurance of each brand
+
+```{r echo=FALSE}
+counts = table(data$name)
+
+# Convert name to factor and reorder levels based on counts
+data$name = factor(data$name, levels = names(sort(counts, decreasing = FALSE)))
+
+ggplot(data = data, aes(name, fill = name))+
+  geom_bar() + 
+  labs(x = "Brand Name") +
+  labs(title = "Occurance of each Brand") +
+  coord_flip()
+  
+```
+
+Converting name column to numerical columns by assigning numbers to each brand
+
+```{r include=FALSE}
+data$name = str_replace(data$name, 'Maruti', '0')
+data$name = str_replace(data$name, 'Skoda', '1')
+data$name = str_replace(data$name, 'Honda', '2')
+data$name = str_replace(data$name, 'Hyundai', '3')
+data$name = str_replace(data$name, 'Toyota', '4')
+data$name = str_replace(data$name, 'Ford', '5')
+data$name = str_replace(data$name, 'Renault', '6')
+data$name = str_replace(data$name, 'Mahindra', '7')
+data$name = str_replace(data$name, 'Tata', '8')
+data$name = str_replace(data$name, 'Chevrolet', '9')
+data$name = str_replace(data$name, 'Fiat', '10')
+data$name = str_replace(data$name, 'Datsun', '11')
+data$name = str_replace(data$name, 'Jeep', '12')
+data$name = str_replace(data$name, 'Mercedes-Benz', '13')
+data$name = str_replace(data$name, 'Mitsubishi', '14')
+data$name = str_replace(data$name, 'Audi', '15')
+data$name = str_replace(data$name, 'Volkswagen', '16')
+data$name = str_replace(data$name, 'BMW', '17')
+data$name = str_replace(data$name, 'Nissan', '18')
+data$name = str_replace(data$name, 'Lexus', '19')
+data$name = str_replace(data$name, 'Jaguar', '20')
+data$name = str_replace(data$name, 'Land', '21')
+data$name = str_replace(data$name, 'MG', '22')
+data$name = str_replace(data$name, 'Volvo', '23')
+data$name = str_replace(data$name, 'Daewoo', '24')
+data$name = str_replace(data$name, 'Kia', '25')
+data$name = str_replace(data$name, 'Force', '26')
+data$name = str_replace(data$name, 'Ambassador', '27')
+data$name = str_replace(data$name, 'Ashok', '28')
+data$name = str_replace(data$name, 'Isuzu', '29')
+data$name = str_replace(data$name, 'Opel', '30')
+data$name = str_replace(data$name, 'Peugeot', '31')
+
+data$name = as.numeric(data$name)
+```
+
+### Replacing blanks with NA values
+
+```{r}
+data$mileage[data$mileage == ""] = NA
+data$engine[data$engine == ""] = NA
+data$max_power[data$max_power == ""] = NA
+```
+
+### Cleaning and Converting categorical columns to numerical columns
+
+```{r include = FALSE}
+data$mileage = str_replace(data$mileage, 'kmpl', '')
+data$mileage = str_replace(data$mileage, 'km/kg', '')
+data$mileage = as.numeric(data$mileage)
+data$mileage[is.na(data$mileage)]=mean(data$mileage,na.rm=TRUE)
+
+data$engine = str_replace(data$engine, 'CC', '')
+data$engine = as.numeric(data$engine)
+data$engine[is.na(data$engine)]=mean(data$engine,na.rm=TRUE)
+
+
+data$max_power = str_replace(data$max_power, 'bhp', '')
+data$max_power = as.numeric(data$max_power)
+data$max_power[is.na(data$max_power)]=mean(data$max_power,na.rm=TRUE)
+
+
+data$seats = as.numeric(data$seats)
+data$seats[is.na(data$seats)]=median(data$seats,na.rm=TRUE)
+```
+
+```{r}
+sum(is.na(data))
+```
+
+### Plotting distribution of vehicles by fuel type, seller types, number of seats, and transmission
+
+```{r echo=FALSE}
+ggplot(data = data, aes(x=reorder(fuel, fuel, function(x)-length(x)), fill = fuel)) +
+  geom_bar() + labs(x='Fuel') + labs(title = "Bar Graph of Fuel") 
+
+ggplot(data = data, aes(x=reorder(seller_type, seller_type, function(x)-length(x)), fill = seller_type)) +
+  geom_bar() + labs(x='Seller Type') + labs(title = "Bar Graph of Seller Type")
+
+ggplot(data = data, aes(x=reorder(owner, owner, function(x)-length(x)), fill = owner)) +
+  geom_bar() + labs(x='Owner') + labs(title = "Bar Graph of Owner") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(data = data, aes(x=reorder(seats, seats, function(x)-length(x)), fill = seats)) +
+  geom_bar() + labs(x='Seats') + labs(title = "Bar Graph of Seats")
+```
+
+### Converting transmission, owner, seller type and fuel to 0's and 1's
+
+```{r include=FALSE}
+data$transmission = str_replace(data$transmission, 'Manual', "0")
+data$transmission = str_replace(data$transmission, 'Automatic', "1")
+data$transmission = as.numeric(data$transmission)
+```
+
+```{r}
+table(data$transmission)
+```
+
+```{r include = FALSE}
+
+data$owner = str_replace(data$owner, 'First Owner', "0")
+data$owner = str_replace(data$owner, 'Second Owner', "1")
+data$owner = str_replace(data$owner, 'Third Owner', "2")
+data$owner = str_replace(data$owner, 'Fourth & Above Owner', "3")
+data$owner = str_replace(data$owner, 'Test Drive Car', "4")
+data$owner = as.numeric(data$owner)
+```
+
+```{r}
+table(data$owner)
+```
+
+```{r include = FALSE}
+data$seller_type = str_replace(data$seller_type, "Trustmark Dealer", "0")
+data$seller_type = str_replace(data$seller_type, "Dealer", "1")
+data$seller_type = str_replace(data$seller_type, "Individual", "2")
+data$seller_type = as.numeric(data$seller_type)
+```
+
+```{r}
+table(data$seller_type)
+```
+
+```{r include =FALSE}
+data$fuel = str_replace(data$fuel, 'Diesel', "0")
+data$fuel = str_replace(data$fuel, 'Petrol', "1")
+data$fuel = str_replace(data$fuel, 'CNG', "2")
+data$fuel = str_replace(data$fuel, 'LPG', "3")
+data$fuel = as.numeric(data$fuel)
+```
+
+```{r}
+table(data$fuel)
+```
+
+### Distribution of Selling price, and Kilometers Driven
+
+```{r echo=FALSE}
+ggplot(data, aes(x=selling_price)) + 
+  geom_histogram(aes(y=..density..), colour="black", fill="white")+
+  geom_density(alpha=.2, fill="blue")+
+  labs(x='Selling Price ') + labs(title = "Histogram Graph of Selling Price") +
+  scale_x_continuous(trans='log10')
+
+ggplot(data, aes(x=km_driven)) + 
+  geom_histogram(color="black", fill="blue", bins = 200)+
+  labs(x='Km Driven ') + labs(title = "Histogram Graph of Km Driven") +
+  scale_x_continuous(trans='log10')
+
+```
+
+### Correlation between variables with CORRPLOT library
+
+```{r echo=FALSE}
+corrplot(cor(data), type="full", 
+         method ="color", title = "Correlation Plot", 
+         mar=c(0,0,1,0), tl.cex= 0.8, outline= T,tl.col="indianred4")
+round(cor(data),2)
+```
+
+We can see that selling price is highly correlated to engine, max_power, name, and transmission, with year as well.
+
+## Splitting of Dataset into 70 and 30 split
+
+```{r}
+set.seed(5)
+trainIndex = createDataPartition(data$selling_price, p = .7,
+                                  list = FALSE,
+                                  times = 1)
+train_data = data[ trainIndex,]
+test_data = data[-trainIndex,]
+```
+
+### Linear Regression
+
+```{r echo=FALSE}
+lm_data = lm(selling_price ~ ., data = train_data)
+summary(lm_data)
+```
+
+We can get rid of Fuel, Owner and Seats as they are least significant for the model. Now we train our model with name,year,km_driven,seller_type,mileage,transmission,max_power and evaluate the model
+
+```{r }
+lm1_data = lm(selling_price ~ name+year+km_driven+seller_type+mileage+transmission+max_power, data = train_data)
+```
+
+### using this Linear Regression model to predict
+
+```{r }
+pred_lr = predict(lm1_data, newdata = test_data)
+error_lr = (test_data$selling_price - pred_lr)
+RMSE_lr = sqrt(mean(error_lr^2))
+print(paste("RMSE LINEAR REGRESSION: ",RMSE_lr))
+```
+
+### now we plot the predicted values and actual values
+
+```{r echo=FALSE}
+plot(test_data$selling_price,pred_lr, main="Scatterplot", col = c("red","blue"), xlab = "Actual Selling Price", ylab = "Predicted Selling Price")
+
+```
+# With Linear Regression we got **`r RMSE_lr`** of RMSE.
+
+### Model 2 : Random Forest
+
+```{r}
+rm_model= randomForest(selling_price ~ ., data = train_data)
+rm_model
+plot(rm_model)
+```
+
+## Plotting feature importance
+
+```{r}
+varImpPlot(rm_model, main = "Feature Importance")
+
+```
+
+### Using Random Forest model on Test Dataset
+
+```{r}
+
+pred_rf = predict(rm_model, test_data)
+error_rm = test_data$selling_price - pred_rf
+rmse_rm = sqrt(mean(error_rm^2))
+print(paste('Random Forest RMSE: ', rmse_rm))
+```
+
+### plotting of predicted values from Random forest and actual values
+
+```{r}
+plot(test_data$selling_price,pred_rf, main="Scatterplot", col = c("red","blue"), xlab = "Actual Selling Price", ylab = "Predicted Selling Price")
+```
+
+# With Random Forest we got **`r rmse_rm`** of RMSE.
+
+## Model 3 : Gradient Boosting
+
+```{r}
+
+gbm_model = gbm(formula = selling_price ~ .,
+            distribution = "gaussian",
+            data = train_data,
+            n.trees = 6000,
+            interaction.depth = 3,
+            shrinkage = 0.1,
+            cv.folds = 5,
+            n.cores = NULL, # will use all cores by default
+            verbose = FALSE)
+
+gbm_model
+```
+### Plotting loss function as a result of n tress added to the ensemble
+
+```{r}
+gbm.perf(gbm_model, method = "cv")
+```
+
+### Variable Importance
+cBars = 10: This option defines the number of confidence bars to show in the summary plot. Confidence bars are used to show the uncertainty in the estimated values. In this case, it is set to 10, indicating that the summary will include 10 confidence bars.  
+method = relative.influence: This argument sets the method for calculating variable importance. In this case, it is set to "relative.influence", a strategy typically used in GBM models to quantify predictors' relative importance. It calculates each predictor's influence on the response variable in comparison to the other predictors.  
+las = 2: This option specifies the orientation of the axis labels in the summary graphic. A value of two indicates that the labels are parallel to the axis.   
+```{r}
+summary(gbm_model, cBars = 10, method = relative.influence, las =2)
+
+
+```
+
+### Using the model to predict selling price in the Test dataset
+
+```{r}
+pred_gbm = predict(gbm_model, test_data)
+error_gbm <- test_data$selling_price - pred_gbm
+RMSE_gbm <- sqrt(mean(error_gbm^2))
+print(paste("RMSE for Gradient Boosting Model: ", RMSE_gbm))
+```
+
+### Plotting predicted and actual values
+
+```{r}
+plot(test_data$selling_price,pred_gbm, 
+     main="Scatterplot", 
+     col = c("red","blue"), 
+     xlab = "Actual Selling Price", ylab = "Predicted Selling Price")
+```
+
+# With Gradient Boosting we got **`r RMSE_gbm`** of RMSE.
+
+# Conclusion
+
+We implemented Linear regression, Random forest, and Gradient Boosting model on the Cars dataset for the prediction of selling price.  
+After computing all the models we have also evaluated each model based on it's RMSE value.
+Overall, we can see Gradient Boosting with the least RMSE which indicates Gradient boosting is better than linear regression and random forest at predicting the selling price of a vehicle.  
+Linear Regression RMSE: **`r RMSE_lr`* * 
+Random Forest RMSE : **`r rmse_rm` * *
+Gradient Boosting RMSE : **`r RMSE_gbm`**
+
+Gradient Boosting surpassed Linear Regression and Random Forest, resulting in the lowest RMSE of **1.2573857 × 10^5**. This shows that Gradient Boosting is a better fit for forecasting vehicle selling prices in this dataset than the other models. Gradient Boosting's RMSE was significantly lower than Linear Regression **(4.5791692 × 10^5)** and Random Forest **(1.2870395 × 10^5)**, showing greater predictive accuracy. As a result, for effectively projecting car prices in this context, Gradient Boosting emerges as the best option among the three models.

@@ -1,0 +1,24 @@
+"0","gbm_model
+"
+"1","gbm(formula = selling_price ~ ., distribution = ""gaussian"", data = train_data, 
+"
+"1","    n.trees = 6000, interaction.depth = 3, shrinkage = 0.1, cv.folds = 5, 
+"
+"1","    verbose = FALSE, n.cores = NULL)
+"
+"1","A gradient boosted model with gaussian loss function.
+"
+"1","6000 iterations were performed.
+"
+"1","The best cross-validation iteration was 4134.
+"
+"1","There were"
+"1"," "
+"1","11"
+"1"," "
+"1","predictors of which"
+"1"," "
+"1","11"
+"1"," "
+"1","had non-zero influence.
+"
